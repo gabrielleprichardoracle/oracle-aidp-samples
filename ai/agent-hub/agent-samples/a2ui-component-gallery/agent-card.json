@@ -1,0 +1,41 @@
+{
+  "name": "A2UI Component Gallery",
+  "description": "Conversational guide and dual-version reference implementation for exploring validated A2UI v0.8 and v0.9 component previews and action paths.",
+  "version": "1.1.0",
+  "documentationUrl": "https://github.com/oracle-samples/oracle-aidp-samples/tree/main/ai/agent-hub/agent-samples/a2ui-component-gallery",
+  "capabilities": { "isStreaming": true },
+  "provider": {
+    "organization": "Oracle Samples",
+    "url": "https://github.com/oracle-samples/oracle-aidp-samples"
+  },
+  "skills": [
+    {
+      "id": "learn-about-a2ui",
+      "name": "Learn about A2UI",
+      "description": "Chats about A2UI and explains how to explore the component gallery.",
+      "tags": ["a2ui", "help", "conversation"],
+      "examples": ["What can I ask you?", "What is A2UI?"]
+    },
+    {
+      "id": "browse-a2ui-gallery",
+      "name": "Browse the A2UI component gallery",
+      "description": "Displays the newest gallery supported by the client: 31 v0.9 previews or the compatible v0.8 subset.",
+      "tags": ["a2ui", "components", "gallery"],
+      "examples": ["Show the component gallery", "What A2UI components can I preview?"]
+    },
+    {
+      "id": "preview-a2ui-component",
+      "name": "Preview an A2UI component",
+      "description": "Renders a selected component using deterministic Python builders and schema-validated operations.",
+      "tags": ["a2ui", "preview", "validation"],
+      "examples": ["Show me the OADataGrid example", "Preview the chart component"]
+    },
+    {
+      "id": "handle-a2ui-actions",
+      "name": "Handle A2UI actions",
+      "description": "Processes supported component actions, including chart and grid controls, and returns validated UI updates.",
+      "tags": ["a2ui", "actions", "interaction"],
+      "examples": ["Change the chart view", "Sort the sample data grid"]
+    }
+  ]
+}
