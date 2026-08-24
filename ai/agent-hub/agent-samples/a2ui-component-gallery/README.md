@@ -33,7 +33,6 @@ reference.
 a2ui-component-gallery/
 ├── .gitignore               # Excludes the private deployment override
 ├── agent.py                 # AIDP entry point: A2UIComponentGallery
-├── aidp_debug.py            # Opt-in embedded diagnostic channel
 ├── deployment_config.example.py
 ├── THIRD_PARTY_NOTICES.md   # A2UI provenance and attribution
 ├── LICENSES/                # Third-party license texts
@@ -62,7 +61,6 @@ environment:
 | `OCI_REGION` | Yes | An OCI region where the selected Generative AI model is available, such as `us-ashburn-1`. |
 | `OCI_GENAI_MODEL_ID` | Yes | A model ID available to your tenancy in that region. The sample default is `google.gemini-2.5-flash`. |
 | `OCI_GENAI_ENDPOINT` | Usually no | Override only when you cannot use the endpoint derived from `OCI_REGION`. |
-| `AIDP_DEBUG_ENABLED` | No | Leave unset. Set to `true` temporarily only while diagnosing the sample. |
 
 The preferred configuration is to set the first three values as environment
 variables on the AI compute. If your AIDP environment does not expose compute
@@ -96,7 +94,7 @@ use the selected model.
 6. Deploy to TEST first.
 7. Send `What can you help me with?` and confirm HTTP 200 plus an AI message.
 8. Send `Show me a demo` in an A2UI-capable client and confirm the gallery renders.
-9. After TEST verification, deploy the same files to PROD and publish the agent card.
+9. After TEST verification, deploy the same files to PROD.
 
 The Python class name intentionally matches the required flow display name.
 

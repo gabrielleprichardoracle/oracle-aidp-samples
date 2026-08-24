@@ -41,8 +41,6 @@ from templates.template_utils import (
     is_help_query,
     wants_ui,
 )
-from aidp_debug import DebugLog, debug, debug_error, debug_warn
-
 logger = logging.getLogger("a2ui_component_demo_agent")
 
 try:
@@ -191,7 +189,6 @@ class A2UIComponentGallery:
       return
 
     logger.info("Setting up dual-version A2UI template-selector agent...")
-    debug("setting up component gallery", model_id=MODEL_ID, region=OCI_REGION)
     oci_llm = init_oci_llm(llm_conf)
 
     try:
@@ -204,7 +201,6 @@ class A2UIComponentGallery:
       )
     except Exception as exc:
       logger.warning("Agent init with checkpointer failed: %s, retrying without", exc)
-      debug_warn("checkpointer unavailable; using stateless graph", error=str(exc))
       self.agent = create_react_agent(
           model=oci_llm,
           tools=[],
@@ -221,7 +217,6 @@ class A2UIComponentGallery:
       )
     except Exception as exc:
       logger.warning("Conversational agent init failed; using text fallback: %s", exc)
-      debug_warn("conversational agent unavailable", error=str(exc))
 
     logger.info("Dual-version A2UI template-selector agent ready.")
 
@@ -280,7 +275,6 @@ class A2UIComponentGallery:
         user_query
     )
     if deterministic_component in supported_components:
-      debug("deterministic component selection", component=deterministic_component)
       return deterministic_component
 
     if self.agent is None:
@@ -316,7 +310,6 @@ class A2UIComponentGallery:
       parsed = json.loads(content) if content else None
     except Exception as exc:
       logger.warning("Template selector LLM failed, using fallback component selection: %s", exc)
-      debug_warn("template selector fallback", error=str(exc))
       parsed = None
 
     if not isinstance(parsed, dict):
@@ -332,18 +325,14 @@ class A2UIComponentGallery:
     config = pre_invoke_setup(**kwargs)
     if not isinstance(user_query, str):
       user_query = json.dumps(user_query, ensure_ascii=True, default=str)
-    debug("component gallery invoke", query=user_query[:120])
-
     action = extract_action_event(user_query)
     if not isinstance(action, dict):
       if is_help_query(user_query):
         result = build_text_message(HELP_RESPONSE)
-        DebugLog.embed(result)
         return result
 
       if is_greeting_query(user_query):
         result = build_text_message(GREETING_RESPONSE)
-        DebugLog.embed(result)
         return result
 
       if not wants_ui(user_query):
@@ -354,14 +343,11 @@ class A2UIComponentGallery:
             chat_text = extract_response_text(chat_result)
             if chat_text:
               result = build_text_message(chat_text)
-              DebugLog.embed(result)
               return result
           except Exception as exc:
             logger.warning("Conversational response failed; using help fallback: %s", exc)
-            debug_warn("conversational response fallback", error=str(exc))
 
         result = build_text_message(HELP_RESPONSE)
-        DebugLog.embed(result)
         return result
 
     # Capability negotiation belongs only to requests that will emit A2UI.
@@ -373,24 +359,22 @@ class A2UIComponentGallery:
           "interactive demo here. You can still ask me about A2UI components "
           "in text, or open this sample in an A2UI-capable Agent Hub client."
       )
-      DebugLog.embed(result)
       return result
 
     try:
       selected_version, selected_catalog, response_catalog_id = self.negotiate_a2ui(metadata)
     except ValueError as exc:
-      debug_warn("no compatible A2UI protocol/catalog", error=str(exc))
+      logger.warning("No compatible A2UI protocol/catalog: %s", exc)
       result = build_text_message(
           "This client does not advertise a compatible A2UI v0.8 or v0.9 "
           "catalog. You can still ask me about the components in text."
       )
-      DebugLog.embed(result)
       return result
     selected_validator = A2uiValidator(selected_catalog)
-    debug(
-        "A2UI protocol negotiated",
-        version=selected_version,
-        catalog_id=response_catalog_id,
+    logger.info(
+        "A2UI protocol negotiated: version=%s catalog_id=%s",
+        selected_version,
+        response_catalog_id,
     )
 
     invocation_template_selection = self.template_selection
@@ -455,15 +439,13 @@ class A2UIComponentGallery:
             repair_async=_repair_async if selected_version == "0.9" else None,
             repair_kwargs=kwargs,
         )
-        DebugLog.embed(result)
         return result
       except Exception as exc:
-        debug_error("action response failed", error=str(exc))
+        logger.exception("Action response failed: %s", exc)
         result = build_text_message(
             "The requested component action could not be rendered. "
             "Show the component gallery again and retry the action."
         )
-        DebugLog.embed(result)
         return result
 
     if wants_ui(user_query):
@@ -478,19 +460,16 @@ class A2UIComponentGallery:
             repair_async=_repair_async if selected_version == "0.9" else None,
             repair_kwargs=kwargs,
         )
-        DebugLog.embed(result)
         return result
       except Exception as exc:
-        debug_error("initial UI response failed", error=str(exc))
+        logger.exception("Initial UI response failed: %s", exc)
         result = build_text_message(
             "The component gallery could not be rendered for this request. "
             "Try 'Show the component gallery' or name a supported component."
         )
-        DebugLog.embed(result)
         return result
 
     result = build_text_message(HELP_RESPONSE)
-    DebugLog.embed(result)
     return result
 
 
