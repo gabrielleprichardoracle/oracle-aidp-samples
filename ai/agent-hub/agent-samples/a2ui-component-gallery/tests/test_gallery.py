@@ -14,7 +14,12 @@ from a2ui_sdk.compat import (  # noqa: E402
     V08SurfaceBuilderAdapter,
     V08_UNSUPPORTED_COMPONENTS,
     capability_candidates,
+    catalog_id_matches_version,
     convert_operations_to_v08,
+)
+from a2ui_sdk.parser import (  # noqa: E402
+    build_text_response_from_llm_text_with_repair,
+    parse_llm_text_to_a2a_parts,
 )
 from templates.template_selection import TemplateSelectionService  # noqa: E402
 from templates.template_utils import (  # noqa: E402
@@ -87,6 +92,10 @@ class GalleryTemplateTests(unittest.TestCase):
                 "Show something that accepts a bounded numeric value"
             )
         )
+        self.assertEqual(
+            "ChoicePicker",
+            self.selection.deterministic_component_for_query("show multiple choice"),
+        )
 
     def test_conversation_and_demo_intents_are_distinct(self):
         self.assertTrue(is_help_query("what can i ask you"))
@@ -145,6 +154,80 @@ class GalleryTemplateTests(unittest.TestCase):
                 )
             ],
         )
+        self.assertEqual(
+            [],
+            capability_candidates(
+                {"a2uiClientCapabilities": {"v1.0": {"supportedCatalogIds": ["future"]}}}
+            ),
+        )
+
+    def test_catalog_alias_matching_uses_an_exact_allowlist(self):
+        self.assertTrue(
+            catalog_id_matches_version(
+                "/a2ui_specification/2.0.0/agent_hub_a2ui_custom_component_catalog.json",
+                "0.9",
+            )
+        )
+        self.assertTrue(catalog_id_matches_version("agent-hub-catalog-v1-v08", "0.8"))
+        self.assertFalse(
+            catalog_id_matches_version(
+                "https://foreign.example/2.0.0/unrelated-catalog.json",
+                "0.9",
+            )
+        )
+
+    def test_validator_registry_uses_platform_independent_schema_urls(self):
+        registry_uris = {str(uri) for uri in self.validator._registry}
+        self.assertIn(
+            "https://a2ui.org/specification/v0_9/catalog.json",
+            registry_uris,
+        )
+        self.assertIn(
+            "https://a2ui.org/specification/v0_9/common_types.json",
+            registry_uris,
+        )
+        self.assertFalse(any("\\" in uri for uri in registry_uris))
+
+    def test_manager_star_import_exports_only_defined_names(self):
+        namespace: dict[str, object] = {}
+        exec("from a2ui_sdk.manager import *", namespace)
+        self.assertIn("A2uiSchemaManager", namespace)
+
+    def test_invalid_a2ui_after_text_raises_instead_of_being_dropped(self):
+        with self.assertLogs("a2ui_sdk.parser", level="WARNING"):
+            with self.assertRaises(ValueError):
+                parse_llm_text_to_a2a_parts(
+                    "Here is the preview. <a2ui-json>{INVALID}</a2ui-json>",
+                    validator=self.validator,
+                )
+
+    def test_invalid_a2ui_after_text_triggers_one_repair_attempt(self):
+        operations = self.builder.build_surface_operations(
+            surface_id="repair-test",
+            catalog_id=self.catalog.catalog_id,
+            selected_component="Text",
+            include_begin=True,
+        )
+        repair_calls: list[str] = []
+
+        async def repair_async(prompt: str) -> str:
+            repair_calls.append(prompt)
+            import json
+
+            return f"<a2ui-json>{json.dumps(operations)}</a2ui-json>"
+
+        with self.assertLogs("a2ui_sdk.parser", level="WARNING"):
+            result = asyncio.run(
+                build_text_response_from_llm_text_with_repair(
+                    "Here is the preview. <a2ui-json>{INVALID}</a2ui-json>",
+                    user_query="show text",
+                    validator=self.validator,
+                    repair_async=repair_async,
+                    max_repair_attempts=1,
+                )
+            )
+        self.assertEqual(1, len(repair_calls))
+        self.assertTrue(result.get("messages"))
 
     def test_v08_preserves_path_backed_audio_data(self):
         manager = A2uiSchemaManager(version="0.8")

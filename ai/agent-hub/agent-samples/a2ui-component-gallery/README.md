@@ -151,6 +151,9 @@ runtime provides one.
   v0.9 catalog and did not send an empty `a2uiClientCapabilities` object.
 - **Catalog negotiation failed**: make sure the client supports the catalog ID
   in `a2ui_sdk/v0_9/complete_catalog.json`.
+- **Missing OCI compartment**: set `OCI_COMPARTMENT_ID` or create the private
+  `deployment_config.py` override before starting the agent. Setup stops early
+  with a configuration error rather than sending the placeholder to OCI.
 - **Model call fails**: select a model available in the configured OCI region.
   Template selection falls back to `Text`, but setup still needs a valid model.
 

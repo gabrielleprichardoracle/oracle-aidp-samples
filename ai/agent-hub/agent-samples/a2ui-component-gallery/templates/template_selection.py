@@ -40,7 +40,6 @@ class TemplateSelectionService:
             "AudioPlayer": ("audio player", "audioplayer"),
             "CheckBox": ("check box", "checkbox"),
             "ChoicePicker": ("choice picker", "choicepicker", "multiple choice"),
-            "ChoicePicker": ("choice picker", "choicepicker"),
             "DateTimeInput": ("date time input", "datetime input", "datetimeinput"),
             "TextField": ("text field", "textfield"),
             "OAActionCard": ("oa action card", "action card", "oaactioncard"),

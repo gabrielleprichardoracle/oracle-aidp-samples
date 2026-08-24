@@ -1,4 +1,7 @@
 # Copyright 2026 Google LLC
+# Modifications Copyright (C) 2026, Oracle and/or its affiliates.
+#
+# This file includes code adapted from the A2UI SDK and has been modified by Oracle.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -587,6 +590,7 @@ class A2uiValidator:
   def __init__(self, catalog: A2uiCatalog):
     self._catalog = catalog
     self.version = getattr(catalog, "version", VERSION_0_8)
+    self._registry: Any = None
     self._validator = self._build_validator()
 
   def get_version(self) -> str:
@@ -625,7 +629,7 @@ class A2uiValidator:
 
     base_uri = self._catalog.s2c_schema.get("$id", BASE_SCHEMA_URL)
     # Even in v0.8, we may have references to common_types.json or other files.
-    common_types_uri = os.path.join(os.path.dirname(base_uri), "common_types.json")
+    common_types_uri = urljoin(base_uri, "common_types.json")
     resources = [
         (
             common_types_uri,
@@ -642,10 +646,10 @@ class A2uiValidator:
             ),
         ),
     ]
-    registry = Registry().with_resources(resources)
+    self._registry = Registry().with_resources(resources)
     validator_schema = copy.deepcopy(full_schema)
     validator_schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
-    return Draft202012Validator(validator_schema, registry=registry)
+    return Draft202012Validator(validator_schema, registry=self._registry)
 
   def _build_0_9_validator(self):
     from jsonschema import Draft202012Validator
@@ -659,8 +663,8 @@ class A2uiValidator:
     # $id: https://a2ui.org/specification/v0_9/server_to_client.json,
     # these resolve to https://a2ui.org/specification/v0_9/catalog.json.
     # We must register them using these absolute URIs.
-    catalog_uri = os.path.join(os.path.dirname(base_uri), "catalog.json")
-    common_types_uri = os.path.join(os.path.dirname(base_uri), "common_types.json")
+    catalog_uri = urljoin(base_uri, "catalog.json")
+    common_types_uri = urljoin(base_uri, "common_types.json")
 
     resources = [
         (
@@ -705,10 +709,10 @@ class A2uiValidator:
           )
       )
 
-    registry = Registry().with_resources(resources)
+    self._registry = Registry().with_resources(resources)
     validator_schema = copy.deepcopy(full_schema)
     validator_schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
-    return Draft202012Validator(validator_schema, registry=registry)
+    return Draft202012Validator(validator_schema, registry=self._registry)
 
   def validate(
       self,
@@ -809,7 +813,7 @@ class A2uiValidator:
     sub_schema = self._catalog.s2c_schema.get("$defs", {}).get(def_name)
     if not sub_schema:
       raise ValueError(f"Definition {def_name} not found in schema")
-    return Draft202012Validator(sub_schema, registry=self._validator._registry)
+    return Draft202012Validator(sub_schema, registry=self._registry)
 
   def _get_formatted_errors(self, validator: Any, instance: Any, base_path: str) -> list[str]:
     errors = list(validator.iter_errors(instance))
@@ -873,7 +877,7 @@ class A2uiValidator:
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "$ref": f"catalog.json#/components/{comp_type}",
     }
-    validator = Draft202012Validator(temp_schema, registry=self._validator._registry)
+    validator = Draft202012Validator(temp_schema, registry=self._registry)
     return self._get_formatted_errors(validator, comp, path)
 
   def extract_component_ref_fields(self) -> dict[str, tuple[set[str], set[str]]]:
@@ -1686,7 +1690,6 @@ __all__ = [
     "ENCODING",
     "DEFAULT_CATALOG_NAME",
     "DEFAULT_CATALOG_ID",
-    "DEFAULT_CATALOG_ID_BY_VERSION",
     "INLINE_CATALOG_NAME",
     "SUPPORTED_CATALOG_IDS_KEY",
     "INLINE_CATALOGS_KEY",

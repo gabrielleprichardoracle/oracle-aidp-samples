@@ -31,6 +31,17 @@ class SanitizedSampleTests(unittest.TestCase):
                     violations.append(f"{path.relative_to(SAMPLE_ROOT)}: {description}")
         self.assertEqual([], violations)
 
+    def test_requirements_have_supported_minimum_versions_without_langchain(self):
+        requirements = (SAMPLE_ROOT / "requirements.txt").read_text(encoding="utf-8")
+        self.assertIn("jsonschema>=4.18.0", requirements)
+        self.assertIn("referencing>=0.30.0", requirements)
+        self.assertNotIn("langchain", requirements.lower())
+
+    def test_agent_fails_early_for_the_compartment_placeholder(self):
+        agent_source = (SAMPLE_ROOT / "agent.py").read_text(encoding="utf-8")
+        self.assertIn("OCI compartment is not configured", agent_source)
+        self.assertIn('configured_compartment_id == "<your-compartment-ocid>"', agent_source)
+
 
 if __name__ == "__main__":
     unittest.main()

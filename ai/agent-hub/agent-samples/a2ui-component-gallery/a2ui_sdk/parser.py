@@ -1,6 +1,6 @@
 # Copyright 2025 Google LLC
 # Copyright 2026 Google LLC
-# Modifications Copyright (C) 1997, 2026, Oracle and/or its affiliates.
+# Modifications Copyright (C) 2026, Oracle and/or its affiliates.
 #
 # This file includes code adapted from the A2UI SDK and has been modified by Oracle.
 #
@@ -23,9 +23,6 @@ import logging
 import re
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Dict, List, Optional
-
-from langchain_core.messages import AIMessage
-
 
 logger = logging.getLogger(__name__)
 
@@ -300,26 +297,24 @@ def _parse_response_to_parts(
       A list of A2A Part objects (TextPart and/or DataPart).
   """
   parts = []
-  try:
-    response_parts = _parse_response(content)
+  response_parts = _parse_response(content)
 
-    for part in response_parts:
-      if part.text:
-        parts.append(Part(root=TextPart(text=part.text)))
+  for part in response_parts:
+    pending_parts: list[Part] = []
+    if part.text:
+      pending_parts.append(Part(root=TextPart(text=part.text)))
 
-      if part.a2ui_json:
-        json_data = part.a2ui_json
-        if validator:
-          _run_validator(validator, json_data)
+    if part.a2ui_json:
+      json_data = part.a2ui_json
+      if validator:
+        _run_validator(validator, json_data)
 
-        if isinstance(json_data, list):
-          for message in json_data:
-            parts.append(create_a2ui_part(message))
-        else:
-          parts.append(create_a2ui_part(json_data))
+      if isinstance(json_data, list):
+        pending_parts.extend(create_a2ui_part(message) for message in json_data)
+      else:
+        pending_parts.append(create_a2ui_part(json_data))
 
-  except Exception as e:
-    logger.warning(f"Failed to parse or validate A2UI response: {e}")
+    parts.extend(pending_parts)
 
   if not parts and fallback_text:
     parts.append(Part(root=TextPart(text=fallback_text)))
@@ -494,7 +489,16 @@ def build_text_message(content: str) -> dict[str, Any]:
   response-building intent and keeps direct AIMessage construction out of agent
   consumers.
   """
-  return {"messages": [AIMessage(content=content)]}
+  try:
+    from langchain_core.messages import AIMessage
+  except ImportError:
+    # Agent Hub provides langchain-core at runtime. Keeping a plain message
+    # fallback lets the schema/template test suite run in a clean environment
+    # with only the sample-owned dependencies installed.
+    message: Any = {"type": "ai", "content": content}
+  else:
+    message = AIMessage(content=content)
+  return {"messages": [message]}
 
 
 def build_a2ui_serialized_parts_text(parts: list[Any]) -> str:

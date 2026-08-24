@@ -2,12 +2,30 @@
 
 from __future__ import annotations
 
+import re
 from copy import deepcopy
 from typing import Any
 
 
 V08_COMPONENT_RENAMES = {"ChoicePicker": "MultipleChoice"}
 V08_UNSUPPORTED_COMPONENTS = {"OAPopup"}
+
+KNOWN_CATALOG_IDS_BY_VERSION = {
+    "0.9": frozenset(
+        {
+            "/a2ui_specification/2.0.0/agent_hub_a2ui_custom_component_catalog.json",
+            "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json",
+        }
+    ),
+    "0.8": frozenset(
+        {
+            "/a2ui_specification/1.0.0/agent_hub_a2ui_custom_component_catalog.json",
+            "agent-hub-catalog-v1-v08",
+        }
+    ),
+}
+
+_VERSION_KEY_PATTERN = re.compile(r"^v?\d+(?:[._]\d+)+$")
 
 V08_PROPERTY_RENAMES: dict[str, dict[str, str]] = {
     "Text": {"variant": "usageHint"},
@@ -50,8 +68,12 @@ def capability_candidates(metadata: object) -> list[tuple[str, dict[str, Any] | 
         "0.9": ("v0.9", "0.9", "v0_9"),
         "0.8": ("v0.8", "0.8", "v0_8"),
     }
-    has_versioned_shape = any(key in raw for keys in version_keys.values() for key in keys)
-    if has_versioned_shape:
+    has_known_version = any(key in raw for keys in version_keys.values() for key in keys)
+    has_explicit_version = any(
+        isinstance(key, str) and _VERSION_KEY_PATTERN.fullmatch(key)
+        for key in raw
+    )
+    if has_known_version or has_explicit_version:
         candidates: list[tuple[str, dict[str, Any] | None]] = []
         for version in ("0.9", "0.8"):
             for key in version_keys[version]:
@@ -73,10 +95,7 @@ def advertised_catalog_ids(capabilities: object) -> list[str]:
 
 
 def catalog_id_matches_version(catalog_id: str, version: str) -> bool:
-    lowered = catalog_id.lower()
-    if version == "0.9":
-        return "v09" in lowered or "v0.9" in lowered or "/2.0.0/" in lowered
-    return "v08" in lowered or "v0.8" in lowered or "/1.0.0/" in lowered
+    return catalog_id in KNOWN_CATALOG_IDS_BY_VERSION.get(version, frozenset())
 
 
 def v08_component_name(component_name: str) -> str:

@@ -188,6 +188,16 @@ class A2UIComponentGallery:
     if self.agent is not None:
       return
 
+    configured_compartment_id = (
+        COMPARTMENT_ID.strip() if isinstance(COMPARTMENT_ID, str) else ""
+    )
+    if not configured_compartment_id or configured_compartment_id == "<your-compartment-ocid>":
+      raise ValueError(
+          "OCI compartment is not configured. Set OCI_COMPARTMENT_ID or copy "
+          "deployment_config.example.py to deployment_config.py and replace "
+          "<your-compartment-ocid>."
+      )
+
     logger.info("Setting up dual-version A2UI template-selector agent...")
     oci_llm = init_oci_llm(llm_conf)
 
@@ -236,8 +246,8 @@ class A2UIComponentGallery:
 
       # The supplied v0.8 SDK used both a URL catalog ID and the legacy
       # agent-hub-catalog-v1-v08 alias. They describe the same bundled schema.
-      # Preserve the ID advertised by the client while validating against the
-      # bundled catalog when either recognizable alias is present.
+      # Preserve a known alias advertised by the client while validating
+      # against the bundled catalog. Foreign IDs are never accepted.
       matching_ids = [
           catalog_id
           for catalog_id in advertised_catalog_ids(client_caps)
