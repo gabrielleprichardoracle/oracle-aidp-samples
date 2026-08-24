@@ -162,6 +162,7 @@ runtime provides one.
 Install only this sample's dependencies, then run:
 
 ```bash
+# run from this sample's directory (ai/agent-hub/agent-samples/a2ui-component-gallery/)
 python -m unittest discover -s tests -v
 ```
 

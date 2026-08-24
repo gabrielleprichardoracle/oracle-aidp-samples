@@ -13,8 +13,12 @@ V08_UNSUPPORTED_COMPONENTS = {"OAPopup"}
 KNOWN_CATALOG_IDS_BY_VERSION = {
     "0.9": frozenset(
         {
+            # The basic catalog URL is intentionally NOT listed here: it is a
+            # real, separate agent-supported catalog (matched directly by
+            # get_selected_catalog), not an alias of the bundled complete
+            # catalog. Listing it would let the alias fallback serve complete-
+            # catalog components stamped with the basic-catalog ID.
             "/a2ui_specification/2.0.0/agent_hub_a2ui_custom_component_catalog.json",
-            "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json",
         }
     ),
     "0.8": frozenset(
@@ -25,7 +29,7 @@ KNOWN_CATALOG_IDS_BY_VERSION = {
     ),
 }
 
-_VERSION_KEY_PATTERN = re.compile(r"^v?\d+(?:[._]\d+)+$")
+_VERSION_KEY_PATTERN = re.compile(r"^v?\d+(?:[._]\d+)*$")
 
 V08_PROPERTY_RENAMES: dict[str, dict[str, str]] = {
     "Text": {"variant": "usageHint"},

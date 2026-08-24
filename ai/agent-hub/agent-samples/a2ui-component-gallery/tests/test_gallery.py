@@ -160,6 +160,21 @@ class GalleryTemplateTests(unittest.TestCase):
                 {"a2uiClientCapabilities": {"v1.0": {"supportedCatalogIds": ["future"]}}}
             ),
         )
+        # Major-only future spellings (v2, v10) must also be recognized as
+        # version keys and fall through to the text fallback, not be
+        # misread as flat capabilities and served v0.9 operations.
+        for future_key in ("v2", "v10", "2"):
+            with self.subTest(future_key=future_key):
+                self.assertEqual(
+                    [],
+                    capability_candidates(
+                        {
+                            "a2uiClientCapabilities": {
+                                future_key: {"supportedCatalogIds": ["future"]}
+                            }
+                        }
+                    ),
+                )
 
     def test_catalog_alias_matching_uses_an_exact_allowlist(self):
         self.assertTrue(
@@ -172,6 +187,16 @@ class GalleryTemplateTests(unittest.TestCase):
         self.assertFalse(
             catalog_id_matches_version(
                 "https://foreign.example/2.0.0/unrelated-catalog.json",
+                "0.9",
+            )
+        )
+        # The basic catalog is a real separate catalog served by direct match,
+        # NOT an alias of the bundled complete catalog. If this ever returns
+        # True again, the alias fallback in negotiate_a2ui will emit complete-
+        # catalog components stamped with the basic-catalog ID.
+        self.assertFalse(
+            catalog_id_matches_version(
+                "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json",
                 "0.9",
             )
         )
